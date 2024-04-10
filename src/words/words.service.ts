@@ -14,9 +14,11 @@ export class WordsService {
   async get100words(){
     const words = await Word.findAll({
         order: Sequelize.literal('RANDOM()'), 
-        limit: 20,
+        limit: 100,
       });
-    return words;
+    const arr = words.flatMap((word => word.words.split(', '))).slice(0, 100)
+    arr.sort(() => Math.random() - 0.5)
+    return arr;
   } 
   
   async getAllWords(){

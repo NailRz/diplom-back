@@ -9,6 +9,9 @@ import { RolesModule } from './roles/roles.module';
 import { Role } from "./roles/roles.model";
 import { UserRoles } from "./roles/user-roles.model";
 import { AuthModule } from './auth/auth.module';
+import { ResultsService } from './results/results.service';
+import { ResultsController } from './results/results.controller';
+import { ResultsModule } from './results/results.module';
 
 @Module({
     controllers: [],
@@ -31,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
         WordsModule,
         RolesModule,
         AuthModule,
+        ResultsModule,
     ]
 })
 export class AppModule {}

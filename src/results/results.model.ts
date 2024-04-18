@@ -7,25 +7,35 @@ export class Results extends Model<Results> {
   @Column({ type: DataType.INTEGER, unique: true, autoIncrement: true, primaryKey: true })
   id: number;
 
-  @Column({ type: DataType.JSON })
-  correctWords: string[];
+  @ForeignKey(() => User)
+  @Column({ type: DataType.INTEGER })
+  userId: number;
+
+  @Column({ type: DataType.INTEGER })
+  time: number;
+
+  @Column({ type: DataType.FLOAT })
+  calculatedWpm: number;
+
+  @Column({ type: DataType.FLOAT })
+  calculatedAccuracy: number;
 
   @Column({ type: DataType.JSON })
   enteredWords: string[];
 
   @Column({ type: DataType.JSON })
-  mistakes: { time: number, wordIndex: number, letterIndex: number }[];
+  mistakes: { time: number, wordIndex: number, letterIndex: number, enteredLetter: string, correctLetter: string }[];
+
 
   @Column({ type: DataType.JSON })
-  wpm: number[];
+  wpmArray: string[];
 
   @Column({ type: DataType.JSON })
-  rawWpm: number[];
+  rawWpmArray: string[];
+
+  @Column({ type: DataType.JSON })
+  correctWords: string[];
   
-  @ForeignKey(() => User)
-  @Column({ type: DataType.INTEGER })
-  userId: number;
-
   @BelongsTo(() => User)
   user: User;
 }

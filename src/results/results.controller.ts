@@ -15,7 +15,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @Controller('results')
 export class ResultsController {
   constructor(private resultsService: ResultsService) {}
-
+ 
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() dto: CreateResultDto, @Request() req) {

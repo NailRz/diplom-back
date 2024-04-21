@@ -15,7 +15,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @Controller('results')
 export class ResultsController {
   constructor(private resultsService: ResultsService) {}
- 
+
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() dto: CreateResultDto, @Request() req) {
@@ -33,6 +33,22 @@ export class ResultsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('/lastTen')
+  async findLastTen(@Request() req) {
+    const userId = req.user.id;
+    const results = await this.resultsService.findLast10(userId);
+    return results;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/error-stats')
+  async getErrorStats(@Request() req) {
+    const userId = req.user.id;
+    const errorStats = await this.resultsService.getErrorStats(userId);
+    return errorStats;
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: number, @Request() req) {
     const userId = req.user.id;
@@ -47,4 +63,6 @@ export class ResultsController {
     await this.resultsService.delete(id, userId);
     return { message: 'Result deleted' };
   }
+  
+
 }

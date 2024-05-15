@@ -32,6 +32,8 @@ export class WordsController {
     return this.wordsService.get100words();
   }
 
+
+
   @UseGuards(JwtAuthGuard)
   @Get('by-ngrams')
   async getWordsByTopErrors(@Request() req) {
@@ -43,4 +45,17 @@ export class WordsController {
       errorStats.combinationErrors,
     );
   }
+
+
+  // @UseGuards(JwtAuthGuard)
+  // @Get('by-ngrams')
+  // async generateWordsByErrorss(@Request() req) {
+  //   const userId = req.user.id;
+  //   const errorStats = await this.resultsService.getErrorStats(userId);
+
+  //   return await this.wordsService.generateWordsByErrors(
+  //     errorStats.letterErrors,
+  //     errorStats.combinationErrors,
+  //   );
+  // }
 }

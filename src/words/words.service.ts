@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Word } from './words.model';
 import { Sequelize } from 'sequelize';
-import { shuffle } from 'lodash';
+import { shuffle, toArray } from 'lodash';
 
 @Injectable()
 export class WordsService {
@@ -107,14 +107,18 @@ export class WordsService {
     return hash;
   }
 
-  async getWordsByTopErrors(letterErrors: Map<string, number>, combinationErrors: Map<string, number>,): Promise<string[]> {
+  async getWordsByTopErrors(
+    letterErrors: Map<string, number>,
+    combinationErrors: Map<string, number>,
+  ): Promise<string[]> {
     // Находим топ 5 ошибок в letterErrors и combinationErrors
     const combinationErrorsMap = new Map(Object.entries(combinationErrors));
-
-    const topLetterErrors = Array.from(letterErrors.entries())
+    const letterErrorsArray = toArray(letterErrors);
+    const topLetterErrors = letterErrorsArray
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-      .map(([letter]) => letter);
+      .map((element) => element[0])
+      .filter(Boolean);
 
     const topCombinationErrors = Array.from(combinationErrorsMap.entries())
       .sort((a, b) => b[1] - a[1])
@@ -128,7 +132,7 @@ export class WordsService {
       const words = await this.findWordsByLetter(letter);
       wordsWithErrors.push(...words);
     }
-
+    
     for (const combination of topCombinationErrors) {
       const words = await this.findWordsByCombination(combination);
       wordsWithErrors.push(...words);
@@ -189,4 +193,5 @@ export class WordsService {
 
     return words;
   }
+
 }

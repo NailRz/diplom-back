@@ -34,28 +34,28 @@ export class WordsController {
 
 
 
-  @UseGuards(JwtAuthGuard)
-  @Get('by-ngrams')
-  async getWordsByTopErrors(@Request() req) {
-    const userId = req.user.id;
-    const errorStats = await this.resultsService.getErrorStats(userId);
-
-    return await this.wordsService.getWordsByTopErrors(
-      errorStats.letterErrors,
-      errorStats.combinationErrors,
-    );
-  }
-
-
   // @UseGuards(JwtAuthGuard)
   // @Get('by-ngrams')
-  // async generateWordsByErrorss(@Request() req) {
+  // async getWordsByTopErrors(@Request() req) {
   //   const userId = req.user.id;
   //   const errorStats = await this.resultsService.getErrorStats(userId);
 
-  //   return await this.wordsService.generateWordsByErrors(
+  //   return await this.wordsService.getWordsByTopErrors(
   //     errorStats.letterErrors,
   //     errorStats.combinationErrors,
   //   );
   // }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Get('by-ngrams')
+  async generateWordsByErrorss(@Request() req) {
+    const userId = req.user.id;
+    const errorStats = await this.resultsService.getErrorStats(userId);
+
+    return await this.wordsService.getWordsByTopErrorsWithGA(
+      errorStats.letterErrors,
+      errorStats.combinationErrors,
+    );
+  }
 }

@@ -210,9 +210,11 @@ export class WordsService {
     return words.split(/[ ,,]+/).filter((word) => word.length > 0);
   }
 
+  
+  
   async getWordsByTopErrorsWithGA(
     letterErrors: Map<string, number>,
-    combinationErrors: Map<string, number>,
+    combinationErrors: Map<string, number>
   ): Promise<string[]> {
     let population = await this.initializePopulation();
     const maxGenerations = 50;
@@ -220,145 +222,200 @@ export class WordsService {
     let bestFitness = 0;
     let bestFitnessGen = 0;
     let bestWords = [];
-
+    const prevFitnesses = [];
+    const currentMaxFitness = 0;
+    
     for (let generation = 0; generation < maxGenerations; generation++) {
       const fitnesses = this.evaluateFitness(population, letterErrors, combinationErrors);
-      fitnessHistory.push(Math.max(...fitnesses));
+      fitnessHistory.push(...fitnesses);
       this.logger.debug(`Generation ${generation}: Fitness = ${fitnessHistory[generation]}`);
-
+  
       if (fitnessHistory[generation] > bestFitness) {
         bestFitness = fitnessHistory[generation];
         bestWords = population[0];
         bestFitnessGen = generation;
       }
-
-      if (generation > 0 && fitnessHistory[generation] === fitnessHistory[generation - 1]) {
+  
+      if (generation > 5 && (fitnessHistory[generation] / fitnessHistory[generation - 1]) < 0.85 ) {
         this.logger.debug('Converged, stopping early.');
         break;
       }
-
+  
+      if (currentMaxFitness > bestFitness) {
+        bestFitness = currentMaxFitness;
+        bestWords = population[fitnesses.indexOf(bestFitness)];
+        bestFitnessGen = generation;
+      }
+  
       const parents = this.selectParents(fitnesses);
       const child = this.crossover(parents, population);
-      const mutatedChild = await this.mutate(child);
-      population = this.replacePopulation(population, mutatedChild);
+      const mutatedChild = await this.mutate(child, letterErrors, combinationErrors);
+      population = this.replacePopulation(population, mutatedChild, letterErrors, combinationErrors);
     }
-
-    this.logger.debug(`Best words: ${bestWords}`);
-    this.logger.debug(`Best fitness: ${bestFitness}`);
-    this.logger.debug(`Best fitness gen: ${bestFitnessGen}`);
-
+  
+    this.logger.debug(`Лучшие слова: ${bestWords}`);
+    this.logger.debug(`Лучший фитнесс: ${bestFitness}`);
+    this.logger.debug(`Поколение с лучшим фитнессом: ${bestFitnessGen}`);
+  
     return bestWords.flatMap((word) => word.split(', ')).slice(0, 500);
   }
-
+  
   private async initializePopulation(): Promise<string[][]> {
     const population: string[][] = [];
-    for (let i = 0; i < 10; i++) { // Создаем начальную популяцию из 10 наборов слов
-      const wordsString = (await this.get100words()).join(' ');
-const words = this.preprocessWords(wordsString);
+    for (let i = 0; i < 5; i++) { 
+      const words = (await this.get100words()).slice(0, 100);
       population.push(words);
     }
     return population;
   }
-
+  
   private evaluateFitness(
     population: string[][],
     letterErrors: Map<string, number>,
-    combinationErrors: Map<string, number>,
-  ): number[] {
+    combinationErrors: Map<string, number>
+): number[] {
     const fitnesses = [];
-
     for (const words of population) {
-      const wordNGrams = words.flatMap((word) => this.calculateNGrams(word));
-      const letterNGrams = this.getLetterNGrams(letterErrors);
-      const combinationNGrams = this.getCombinationNGrams(combinationErrors);
-      const matchedNGrams = wordNGrams.filter(
-        (nGram) =>
-          letterNGrams.includes(nGram) || combinationNGrams.includes(nGram[0] + nGram[1]),
-
-      );
-      const fitness = matchedNGrams.length;
-      fitnesses.push(fitness);
-
+        const wordNGrams = words.flatMap((word) => this.calculateNGrams(word));
+        const letterNGrams = this.getLetterNGrams(letterErrors);
+        const combinationNGrams = this.getCombinationNGrams(combinationErrors);
+        
+        const matchedNGrams = wordNGrams.filter(
+            (nGram) =>
+                letterNGrams.includes(nGram) || combinationNGrams.includes(nGram[0] + nGram[1])
+        );
+        const totalNGrams = wordNGrams.length;
+        const percentage = totalNGrams > 0 ? (matchedNGrams.length / totalNGrams) * 100 : 0;
+        fitnesses.push(percentage);
     }
-
     return fitnesses;
-  }
-
-  private getLetterNGrams = (letterErrors: Map<string, number>): string[] => {
-    const arr = []
+}
+  private getLetterNGrams(letterErrors: Map<string, number>): string[] {
+    const arr = [];
     letterErrors.forEach((value, key) => {
       if (key !== undefined) {
-        arr.push(value[0])
+        arr.push(key); // Исправлено на key вместо value[0]
       }
-
     });
-    // console.log(arr)
     return arr;
-  };
-
+  }
+  
   private getCombinationNGrams(combinationErrors: Map<string, number>): string[] {
     const combinationErrorsMap = new Map<string, number>(Object.entries(combinationErrors));
     // console.log(Array.from(combinationErrorsMap.keys()).flatMap(this.calculateNGrams))
     return Array.from(combinationErrorsMap.keys()).flatMap(this.calculateNGrams);
   }
-
+  
   private selectParents(fitnesses: number[]): number[] {
     const totalFitness = fitnesses.reduce((sum, fitness) => sum + fitness, 0);
     const selectionProbabilities = fitnesses.map((fitness) => fitness / totalFitness);
     const selectedParents = [];
-
+  
     for (let i = 0; i < 2; i++) {
       const randomValue = Math.random();
       let cumulativeProbability = 0;
-
+  
       for (let j = 0; j < selectionProbabilities.length; j++) {
         cumulativeProbability += selectionProbabilities[j];
-
         if (randomValue < cumulativeProbability) {
           selectedParents.push(j);
           break;
         }
       }
     }
-
+  
+    while (selectedParents[0] === selectedParents[1]) {
+      const randomValue = Math.random();
+      let cumulativeProbability = 0;
+      for (let j = 0; j < selectionProbabilities.length; j++) {
+        cumulativeProbability += selectionProbabilities[j];
+        if (randomValue < cumulativeProbability) {
+          selectedParents[1] = j;
+          break;
+        }
+      }
+    }
+  
     return selectedParents;
   }
-
+  
   private crossover(parents: number[], population: string[][]): string[] {
     const parent1 = population[parents[0]];
     const parent2 = population[parents[1]];
     const crossoverPoint = Math.floor(Math.random() * parent1.length);
-    const child = [
+    return [
       ...parent1.slice(0, crossoverPoint),
-      ...parent2.slice(crossoverPoint),
+      ...parent2.slice(crossoverPoint)
     ];
+  }
+  
+  private async mutate(
+    child: string[],
+    letterErrors: Map<string, number>,
+    combinationErrors: Map<string, number>
+  ): Promise<string[]> {
+    const mutationRate = 0.15; // Увеличенная вероятность мутации
+    for (let i = 0; i < child.length; i++) {
+      if (Math.random() < mutationRate) {
+        const newWords = (await this.getRandomWords()).split(', ');
+        const bestWord = this.getBestWord(newWords, letterErrors, combinationErrors);
+        child[i] = bestWord;
+      }
+    }
     return child;
   }
-
-  private async mutate(child: string[]): Promise<string[]> {
-    const mutationRate = 0.3; // 10% шанс мутации каждого слова
-    return Promise.all(child.map(async word => {
-      if (Math.random() < mutationRate) {
-        return this.getRandomWord();
-      }
-      return word;
-    }));
-  }
-
-  private async getRandomWord(): Promise<string> {
-    const randomWord = await this.wordModel.findOne({
+  
+  private async getRandomWords(): Promise<string> {
+    const randomWords = await this.wordModel.findOne({
       order: Sequelize.literal('RANDOM()'),
-      limit: 1,
+      limit: 10 
     });
-    return randomWord.words;
+    return randomWords.words;
   }
-
-  private replacePopulation(population: string[][], child: string[]): string[][] {
-    const fitnesses = this.evaluateFitness(population, new Map(), new Map());
+  
+  private getBestWord(words: string[], letterErrors: Map<string, number>, combinationErrors: Map<string, number>): string {
+    let bestWord = words[0];
+    let bestFitness = this.calculateFitnessForWord(bestWord, letterErrors, combinationErrors);
+  
+    for (const word of words) {
+      const fitness = this.calculateFitnessForWord(word, letterErrors, combinationErrors);
+      if (fitness > bestFitness) {
+        bestWord = word;
+        bestFitness = fitness;
+      }
+    }
+  
+    return bestWord;
+  }
+  
+  private calculateFitnessForWord(word: string, letterErrors: Map<string, number>, combinationErrors: Map<string, number>): number {
+    const wordNGrams = this.calculateNGrams(word);
+    const letterNGrams = this.getLetterNGrams(letterErrors);
+    const combinationNGrams = this.getCombinationNGrams(combinationErrors);
+    const matchedNGrams = wordNGrams.filter(
+      (nGram) =>
+        letterNGrams.includes(nGram) || combinationNGrams.includes(nGram[0] + nGram[1])
+    );
+    return matchedNGrams.length;
+  }
+  
+  private replacePopulation(
+    population: string[][],
+    child: string[],
+    letterErrors: Map<string, number>,
+    combinationErrors: Map<string, number>
+  ): string[][] {
+    const fitnesses = this.evaluateFitness(population, letterErrors, combinationErrors);
     const minFitnessIndex = fitnesses.indexOf(Math.min(...fitnesses));
     const newPopulation = [...population];
-    newPopulation[minFitnessIndex] = child;
+  
+    const bestFitnessIndex = fitnesses.indexOf(Math.max(...fitnesses));
+    if (minFitnessIndex !== bestFitnessIndex) {
+      newPopulation[minFitnessIndex] = child;
+    } else {
+      newPopulation[minFitnessIndex] = population[bestFitnessIndex];
+    }
+  
     return newPopulation;
   }
 }
-  

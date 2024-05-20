@@ -9,7 +9,7 @@ import { ResultsService } from 'src/results/results.service';
 
 @Module({
   controllers: [WordsController],
-  providers: [WordsService], 
+  providers: [WordsService,{ provide: 'wordCache', useValue: [] }], 
   imports: [SequelizeModule.forFeature([Word]), ResultsModule, forwardRef(() => AuthModule)],
 })
 export class WordsModule {}

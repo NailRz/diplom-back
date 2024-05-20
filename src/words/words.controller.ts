@@ -52,7 +52,13 @@ export class WordsController {
   async generateWordsByErrorss(@Request() req) {
     const userId = req.user.id;
     const errorStats = await this.resultsService.getErrorStats(userId);
-
+    console.log(errorStats.letterErrors)
+    if (errorStats.letterErrors.length < 10 || errorStats.combinationErrors.length < 10){
+      return await this.wordsService.getWordsByTopErrors(
+            errorStats.letterErrors,
+            errorStats.combinationErrors,
+          );
+    }
     return await this.wordsService.getWordsByTopErrorsWithGA(
       errorStats.letterErrors,
       errorStats.combinationErrors,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConsoleLogger, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from './users.model';
 import { createUserDto } from './dto/create-user.dto';
@@ -31,4 +31,6 @@ export class UsersService {
     });
     return user;
   }
+
+ 
 }

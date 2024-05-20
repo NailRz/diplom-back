@@ -57,12 +57,18 @@ export class ResultsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('/bestWpm')
+  async getBestWpm(@Request() req) {
+    const userId = req.user.id;
+    const bestWpm = await this.resultsService.getBestWpm(userId);
+    return bestWpm;
+  }
+  
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async delete(@Param('id') id: number, @Request() req) {
     const userId = req.user.id;
     await this.resultsService.delete(id, userId);
     return { message: 'Result deleted' };
   }
-  
-
 }

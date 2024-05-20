@@ -48,4 +48,17 @@ export class AuthService {
     }
     throw new UnauthorizedException({message: 'Некорректный email или пароль'})
   }
+
+  async decodeToken(token: string) {
+    try {
+      return this.JwtService.verify(token);
+    } catch (e) {
+      throw new UnauthorizedException({ message: 'Невалидный токен' });
+    }
+  }
+
+  async getUserFromToken(token: string) {
+    const decoded = await this.decodeToken(token);
+    return this.UserService.getUsersByEmail(decoded.email);
+  }
 }

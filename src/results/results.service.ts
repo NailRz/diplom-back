@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Results } from './results.model';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateResultDto } from './dto/create-result-dto';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class ResultsService {
@@ -36,6 +37,20 @@ export class ResultsService {
     if (result) {
       await result.destroy();
     }
+  }
+
+  async getBestWpm(userId: number): Promise<any> {
+    const results = await this.resultsModel.findAll({
+      where: { userId },
+      attributes: [
+        'time',
+        [Sequelize.fn('max', Sequelize.col('calculatedWpm')), 'maxWpm']
+      ],
+      group: ['time'],
+      raw: true // Добавляем raw: true, чтобы получить чистый результат без обертки модели
+    });
+    console.log(results);
+    return results;
   }
 
   async getErrorStats(userId: number): Promise<any> {

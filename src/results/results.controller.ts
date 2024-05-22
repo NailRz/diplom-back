@@ -25,7 +25,7 @@ export class ResultsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get()
+  @Get('/all')
   async findAll(@Request() req) {
     const userId = req.user.id;
     const results = await this.resultsService.findAll(userId);
@@ -49,6 +49,14 @@ export class ResultsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('/bestWpm')
+  async getBestWpm(@Request() req) {
+    const userId = req.user.id;
+    const bestWpm = await this.resultsService.getBestWpm(userId);
+    return bestWpm;
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: number, @Request() req) {
     const userId = req.user.id;
@@ -56,14 +64,6 @@ export class ResultsController {
     return result;
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('/bestWpm')
-  async getBestWpm(@Request() req) {
-    const userId = req.user.id;
-    const bestWpm = await this.resultsService.getBestWpm(userId);
-    return bestWpm;
-  }
-  
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async delete(@Param('id') id: number, @Request() req) {

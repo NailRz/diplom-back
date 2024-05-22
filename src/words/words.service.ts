@@ -147,7 +147,7 @@ export class WordsService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15)
       .map(([combination]) => combination);
-    console.log(topLetterErrors, topCombinationErrors);
+    console.log(topCombinationErrors);
     
     const wordsWithErrors: string[] = [];
   

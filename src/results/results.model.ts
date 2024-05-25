@@ -26,7 +26,6 @@ export class Results extends Model<Results> {
   @Column({ type: DataType.JSON })
   mistakes: { time: number, wordIndex: number, letterIndex: number, enteredLetter: string, correctLetter: string }[];
 
-
   @Column({ type: DataType.JSON })
   wpmArray: string[];
 

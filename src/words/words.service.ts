@@ -93,6 +93,7 @@ export class WordsService {
 
   private calculateNGrams(word: string): string[] {
     if (!word) {
+      // console.log(word.length)
       throw new Error('Слово не может быть undefined или null');
     }
   
@@ -345,7 +346,6 @@ export class WordsService {
       const wordNGrams = words.flatMap((word) => this.calculateNGrams(word));
       const letterNGrams = this.getLetterNGrams(letterErrors);
       const combinationNGrams = this.getCombinationNGrams(combinationErrors);
-      
       const matchedNGrams = wordNGrams.filter(
         (nGram) =>
           letterNGrams.includes(nGram) ||
@@ -375,10 +375,9 @@ export class WordsService {
     const combinationErrorsMap = new Map<string, number>(
       Object.entries(combinationErrors),
     );
-    // console.log(Array.from(combinationErrorsMap.keys()).flatMap(this.calculateNGrams))
-    return Array.from(combinationErrorsMap.keys()).flatMap(
-      this.calculateNGrams,
-    );
+    return Array.from(combinationErrorsMap.keys())
+  .filter(key => key.length > 0) 
+  .flatMap(this.calculateNGrams);
   }
 
   private selectParents(fitnesses: number[]): number[] {
@@ -420,7 +419,7 @@ private async mutate(
   combinationErrors: Map<string, number>,
   randomWords: string[],
 ): Promise<string[]> {
-  const mutationRate = 0.15; // вероятность мутации
+  const mutationRate = 0.05; // вероятность мутации
   for (let i = 0; i < child.length; i++) {
     if (Math.random() < mutationRate) {
       // Если недостаточно слов, подгружаем больше
@@ -481,6 +480,7 @@ private async mutate(
     );
 
     for (const word of words) {
+      // console.log(word);
       const fitness = this.calculateFitnessForWord(
         word,
         letterErrors,

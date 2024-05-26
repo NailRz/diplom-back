@@ -131,6 +131,30 @@ export class WordsService {
     const totalNGrams = wordNGrams.length;
     return totalNGrams > 0 ? (matchedNGrams.length / totalNGrams) * 100 : 0;
   }
+  // async  getTopErrors(
+  //   letterErrors: Map<string, number>,
+  //   combinationErrors: { [key: string]: number }
+  // ): Promise<{ topLetterErrors: [string, number][], topCombinationErrors: { [key: string]: number } }> {
+  
+  //   // Сортировка и взятие первых 5 элементов для letterErrors
+  //   const topLetterErrorsArray = Array.from(letterErrors.entries())
+  //     .sort((a, b) => b[1] - a[1])
+  //     .slice(0, 5);
+  
+  //   // Сортировка и взятие первых 5 элементов для combinationErrors
+  //   const topCombinationErrorsArray = Object.entries(combinationErrors)
+  //     .sort(([, a], [, b]) => b - a)
+  //     .slice(0, 5);
+  
+  //   // Преобразование массива в объект
+  //   const topCombinationErrors = topCombinationErrorsArray.reduce((acc, [key, value]) => {
+  //     acc[key] = value;
+  //     return acc;
+  //   }, {} as { [key: string]: number });
+  
+  //   return { topLetterErrors: topLetterErrorsArray, topCombinationErrors };
+  // }
+
   async getWordsByTopErrors(
     letterErrors: Map<string, number>,
     combinationErrors: Map<string, number>,
@@ -148,7 +172,6 @@ export class WordsService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15)
       .map(([combination]) => combination);
-    console.log(topCombinationErrors);
     
     const wordsWithErrors: string[] = [];
   
@@ -162,6 +185,7 @@ export class WordsService {
       wordsWithErrors.push(...words);
     }
   
+
     
     const uniqueWordsWithErrors = shuffle(Array.from(new Set(wordsWithErrors)));
   
@@ -237,6 +261,8 @@ export class WordsService {
   private preprocessWords(words: string): string[] {
     return words.split(/[ ,,]+/).filter((word) => word.length > 0);
   }
+  private sortedRandomWords: string[] = [];
+  private usedWords: Set<string> = new Set();
 
   async getWordsByTopErrorsWithGA(
     letterErrors: Map<string, number>,
@@ -248,12 +274,15 @@ export class WordsService {
     let bestFitness = 0;
     let bestFitnessGen = 0;
     let bestWords = [];
-    
+    // const { topLetterErrorsMap, topCombinationErrorsMap } = await this.getTopErrors(letterErrors, combinationErrors);
+
   
     // Получаем случайные слова один раз
     let randomWords = await this.getInitialRandomWords();
   
     for (let generation = 0; generation < maxGenerations; generation++) {
+    // console.log(this.usedWords)
+
       const fitnesses = this.evaluateFitness(
         population,
         letterErrors,
@@ -275,10 +304,12 @@ export class WordsService {
   
      
       console.log(bestFitness /  currentMaxFitness)
-      if (generation > 5 && (currentMaxFitness/  bestFitness > 0.99)) {
+      if (generation > 5 && (bestFitness /  currentMaxFitness > 0.95)) {
         flag += 1;
-        // console.log(flag)  
+        console.log(flag)  
         if (flag === 6){
+          this.sortedRandomWords = [];
+          this.usedWords = new Set();
           this.logger.debug('Converged, stopping early.');
           break;
         }
@@ -362,11 +393,13 @@ export class WordsService {
     const arr = [];
     letterErrors.forEach((value, key) => {
       if (value[0] !== undefined) {
-        arr.push(value[0]); 
+        arr.push(value[0]);
       }
     });
-    // console.log(arr)
+    // console.log(arr.sort().slice(0, 4))
+    // arr.sort();
     return arr;
+
   }
 
   private getCombinationNGrams(
@@ -379,6 +412,7 @@ export class WordsService {
   .filter(key => key.length > 0) 
   .flatMap(this.calculateNGrams);
   }
+
 
   private selectParents(fitnesses: number[]): number[] {
     const tournamentSize = 3;
@@ -413,88 +447,104 @@ private crossover(parents: number[], population: string[][]): string[] {
 private getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
-private async mutate(
-  child: string[],
-  letterErrors: Map<string, number>,
-  combinationErrors: Map<string, number>,
-  randomWords: string[],
-): Promise<string[]> {
-  const mutationRate = 0.05; // вероятность мутации
-  for (let i = 0; i < child.length; i++) {
-    if (Math.random() < mutationRate) {
-      // Если недостаточно слов, подгружаем больше
-      if (randomWords.length < 10) {
-        const newWords = await this.getInitialRandomWords();
-        randomWords.push(...newWords);
-        console.log('Подгрузка новых слов для мутации.');
-      }
 
-      let randomIndices = Array.from({ length: 100 }, () =>
-        Math.floor(Math.random() * randomWords.length)
-      );
-      randomIndices = randomIndices.filter(
-        (index) => !bestWordsHistory.includes(randomWords[index])
-      );
-      // console.log(bestWordsHistory)
-      // console.log(bestWordsHistory)
-      const newWords = randomIndices.map((index) => randomWords[index]);  
-      // console.log(newWords)    
-      const bestWord = this.getBestWord(
-        newWords,
-        letterErrors,
-        combinationErrors,
-      );
 
-      if (bestWord) {
-        child[i] = bestWord;
-        if (this.getRandomInt(20) <= 3){
-          bestWordsHistory.push(bestWord);
-        }
-        
-      } else {
-        this.logger.debug('Не удалось найти подходящее слово для замены, пропуск.');
-      }
-    }
-  }
-  return child;
-}
+  // Your existing methods...
 
-  private async getRandomWords(): Promise<string> {
-    const randomWords = await this.wordModel.findOne({
-      order: Sequelize.literal('RANDOM()'),
-      limit: 10,
-    });
-    return randomWords.words;
-  }
-
-  private getBestWord(
-    words: string[],
+  private async mutate(
+    child: string[],
     letterErrors: Map<string, number>,
     combinationErrors: Map<string, number>,
-  ): string {
-    let bestWord = words[0];
-    let bestFitness = this.calculateFitnessForWord(
-      bestWord,
-      letterErrors,
-      combinationErrors,
-    );
+    randomWords: string[],
+  ): Promise<string[]> {
+    const mutationRate = 0.05; // вероятность мутации
 
-    for (const word of words) {
-      // console.log(word);
-      const fitness = this.calculateFitnessForWord(
-        word,
-        letterErrors,
-        combinationErrors,
-      );
-      if (fitness > bestFitness) {
-        bestWord = word;
-        bestFitness = fitness;
-      }
-   
+    if (this.sortedRandomWords.length === 0) {
+      await this.initializeSortedRandomWords(letterErrors, combinationErrors);
     }
 
-    return bestWord;
+    for (let i = 0; i < child.length; i++) {
+      if (Math.random() < mutationRate) {
+        if (this.sortedRandomWords.length === 0) {
+          await this.initializeSortedRandomWords(letterErrors, combinationErrors);
+        }
+
+        let newWordIndex = 0;
+        while (newWordIndex < this.sortedRandomWords.length && this.usedWords.has(this.sortedRandomWords[newWordIndex])) {
+          newWordIndex++;
+        }
+
+        if (newWordIndex < this.sortedRandomWords.length) {
+          const newWord = this.sortedRandomWords[newWordIndex];
+          child[i] = newWord;
+          this.usedWords.add(newWord);
+        } else {
+          this.logger.debug('Не удалось найти подходящее слово для замены, повтор.');
+          await this.initializeSortedRandomWords(letterErrors, combinationErrors);
+          this.usedWords.clear();
+          this.mutate(child, letterErrors, combinationErrors, randomWords);
+        }
+      }
+    }
+
+    return child;
   }
+
+  private async initializeSortedRandomWords(
+    letterErrors: Map<string, number>,
+    combinationErrors: Map<string, number>
+  ): Promise<void> {
+    const newRandomWords = await this.getInitialRandomWords();
+
+    // Remove duplicates and previously used words
+    const uniqueNewRandomWords = [...new Set(newRandomWords)].filter(word => !this.usedWords.has(word));
+
+    // Sort words by their fitness in descending order
+    uniqueNewRandomWords.sort((a, b) => {
+      const fitnessA = this.calculateFitnessForWord(a, letterErrors, combinationErrors);
+      const fitnessB = this.calculateFitnessForWord(b, letterErrors, combinationErrors);
+      return fitnessB - fitnessA;
+    });
+
+    this.sortedRandomWords.push(...uniqueNewRandomWords);
+  }
+
+  // private async getRandomWords(): Promise<string> {
+  //   const randomWords = await this.wordModel.findOne({
+  //     order: Sequelize.literal('RANDOM()'),
+  //     limit: 10,
+  //   });
+  //   return randomWords.words;
+  // }
+
+  // private getBestWord(
+  //   words: string[],
+  //   letterErrors: Map<string, number>,
+  //   combinationErrors: Map<string, number>,
+  // ): string {
+  //   let bestWord = words[0];
+  //   let bestFitness = this.calculateFitnessForWord(
+  //     bestWord,
+  //     letterErrors,
+  //     combinationErrors,
+  //   );
+
+  //   for (const word of words) {
+  //     // console.log(word);
+  //     const fitness = this.calculateFitnessForWord(
+  //       word,
+  //       letterErrors,
+  //       combinationErrors,
+  //     );
+  //     if (fitness > bestFitness) {
+  //       bestWord = word;
+  //       bestFitness = fitness;
+  //     }
+   
+  //   }
+
+  //   return bestWord;
+  // }
 
   private calculateFitnessForWord(
     word: string,
@@ -502,8 +552,8 @@ private async mutate(
     combinationErrors: Map<string, number>,
   ): number {
     const wordNGrams = this.calculateNGrams(word);
-    const letterNGrams = shuffle(this.getLetterNGrams(letterErrors));
-    const combinationNGrams = shuffle(this.getCombinationNGrams(combinationErrors));
+    const letterNGrams = this.getLetterNGrams(letterErrors);
+    const combinationNGrams = this.getCombinationNGrams(combinationErrors);
     const matchedNGrams = wordNGrams.filter(
       (nGram) =>
         letterNGrams.includes(nGram) ||

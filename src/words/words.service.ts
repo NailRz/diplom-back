@@ -294,23 +294,21 @@ export class WordsService {
       fitnessHistory.push(currentMaxFitness);
   
       this.logger.debug(
-        `Generation ${generation}: Current Fitnesses = ${fitnesses}`,
+        `Поколение ${generation}: Совпадения сейчас = ${fitnesses}`,
       );
       this.logger.debug(
-        `Generation ${generation}: Max Fitness = ${currentMaxFitness}`,
+        `Поколение ${generation}: Максимальное совпадение = ${currentMaxFitness}`,
       );
-  
-      
-  
+
      
-      console.log(bestFitness /  currentMaxFitness)
+      // console.log(bestFitness /  currentMaxFitness)
       if (generation > 5 && (bestFitness /  currentMaxFitness > 0.95)) {
         flag += 1;
-        console.log(flag)  
+        // console.log(flag)  
         if (flag === 6){
           this.sortedRandomWords = [];
           this.usedWords = new Set();
-          this.logger.debug('Converged, stopping early.');
+          this.logger.debug('Завершение');
           break;
         }
       } else {
@@ -322,7 +320,7 @@ export class WordsService {
         bestWords = population[currentBestIndex];
         bestFitnessGen = generation;
         this.logger.debug(
-          `New best fitness found: ${bestFitness} in generation ${generation}`,
+          `Лучшее совпадение: ${bestFitness} в поколении ${generation}`,
         );
       }
   
@@ -332,7 +330,7 @@ export class WordsService {
         child,
         letterErrors,
         combinationErrors,
-        randomWords, // Передаем массив случайных слов
+        randomWords,
       );
       population = this.replacePopulation(
         population,
@@ -343,8 +341,8 @@ export class WordsService {
     }
   
     this.logger.debug(`Лучшие слова: ${bestWords}`);
-    this.logger.debug(`Лучший фитнесс: ${bestFitness}`);
-    this.logger.debug(`Поколение с лучшим фитнессом: ${bestFitnessGen}`);
+    this.logger.debug(`Лучшее совпадение: ${bestFitness}`);
+    this.logger.debug(`Поколение с лучшим совпадением: ${bestFitnessGen}`);
     bestWordsHistory = []
     return bestWords.flatMap((word) => word.split(', ')).slice(0, 500);
   }
@@ -396,8 +394,6 @@ export class WordsService {
         arr.push(value[0]);
       }
     });
-    // console.log(arr.sort().slice(0, 4))
-    // arr.sort();
     return arr;
 
   }
@@ -449,7 +445,6 @@ private getRandomInt(max) {
 }
 
 
-  // Your existing methods...
 
   private async mutate(
     child: string[],
@@ -496,10 +491,9 @@ private getRandomInt(max) {
   ): Promise<void> {
     const newRandomWords = await this.getInitialRandomWords();
 
-    // Remove duplicates and previously used words
+    // удаление дубликатов
     const uniqueNewRandomWords = [...new Set(newRandomWords)].filter(word => !this.usedWords.has(word));
 
-    // Sort words by their fitness in descending order
     uniqueNewRandomWords.sort((a, b) => {
       const fitnessA = this.calculateFitnessForWord(a, letterErrors, combinationErrors);
       const fitnessB = this.calculateFitnessForWord(b, letterErrors, combinationErrors);

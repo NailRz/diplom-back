@@ -91,18 +91,26 @@ export class WordsService {
     return bigrams;
   }
 
-  private calculateNGrams(word: string): string[] {
-    if (!word) {
-      // console.log(word.length)
-      throw new Error('Слово не может быть undefined или null');
-    }
+  // private calculateNGrams(word: string): string[] {
+  //   if (!word) {
+  //     console.log(word.length)
+  //     // throw new Error('Слово не может быть undefined или null');
+  //   }
   
-    const nGrams = [];
-    for (let i = 0; i < word.length - 1; i++) {
-      nGrams.push(word.slice(i, i + 2));
+  //   const nGrams = [];
+  //   for (let i = 0; i < word.length - 1; i++) {
+  //     nGrams.push(word.slice(i, i + 2));
+  //   }
+  //   return nGrams;
+  // }
+  private calculateNGrams = (word: string): string[] => {
+    if (word.length === 1) {
+      return [word];
     }
-    return nGrams;
-  }
+    const trigrams = this.getTrigrams(word);
+    const bigrams = this.getBigrams(word);
+    return [...trigrams, ...bigrams];
+  };
   
   private calculateHash(ngram: string): string {
     let hash = '';
@@ -121,6 +129,8 @@ export class WordsService {
     combinationErrors: Map<string, number>
   ): number {
     const wordNGrams = words.flatMap((word) => this.calculateNGrams(word));
+    console.log(words)
+
     const letterNGrams = this.getLetterNGrams(letterErrors);
     const combinationNGrams = this.getCombinationNGrams(combinationErrors);
     
@@ -207,6 +217,7 @@ export class WordsService {
   }
 
   private async findWordsByLetter(letter: string): Promise<string[]> {
+    
     const letterNGrams = this.calculateNGrams(letter);
     const words: string[] = [];
 
@@ -276,13 +287,7 @@ export class WordsService {
     let bestWords = [];
     // const { topLetterErrorsMap, topCombinationErrorsMap } = await this.getTopErrors(letterErrors, combinationErrors);
 
-  
-    // Получаем случайные слова один раз
-    let randomWords = await this.getInitialRandomWords();
-  
     for (let generation = 0; generation < maxGenerations; generation++) {
-    // console.log(this.usedWords)
-
       const fitnesses = this.evaluateFitness(
         population,
         letterErrors,
@@ -305,7 +310,7 @@ export class WordsService {
       if (generation > 5 && (bestFitness /  currentMaxFitness > 0.95)) {
         flag += 1;
         // console.log(flag)  
-        if (flag === 6){
+        if (flag === 7){
           this.sortedRandomWords = [];
           this.usedWords = new Set();
           this.logger.debug('Завершение');
@@ -330,7 +335,7 @@ export class WordsService {
         child,
         letterErrors,
         combinationErrors,
-        randomWords,
+        this.sortedRandomWords,
       );
       population = this.replacePopulation(
         population,
@@ -385,6 +390,7 @@ export class WordsService {
         totalNGrams > 0 ? (matchedNGrams.length / totalNGrams) * 100 : 0;
       fitnesses.push(percentage);
     }
+    console.log(fitnesses)
     return fitnesses;
   }
   private getLetterNGrams(letterErrors: Map<string, number>): string[] {
@@ -452,9 +458,10 @@ private getRandomInt(max) {
     combinationErrors: Map<string, number>,
     randomWords: string[],
   ): Promise<string[]> {
-    const mutationRate = 0.05; // вероятность мутации
+    const mutationRate = 0.1; 
 
     if (this.sortedRandomWords.length === 0) {
+      // console.log('1111111111111111111111111111111111111')
       await this.initializeSortedRandomWords(letterErrors, combinationErrors);
     }
 

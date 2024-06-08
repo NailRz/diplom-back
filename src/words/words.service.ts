@@ -91,18 +91,7 @@ export class WordsService {
     return bigrams;
   }
 
-  // private calculateNGrams(word: string): string[] {
-  //   if (!word) {
-  //     console.log(word.length)
-  //     // throw new Error('Слово не может быть undefined или null');
-  //   }
-  
-  //   const nGrams = [];
-  //   for (let i = 0; i < word.length - 1; i++) {
-  //     nGrams.push(word.slice(i, i + 2));
-  //   }
-  //   return nGrams;
-  // }
+
   private calculateNGrams = (word: string): string[] => {
     if (word.length === 1) {
       return [word];
@@ -141,29 +130,7 @@ export class WordsService {
     const totalNGrams = wordNGrams.length;
     return totalNGrams > 0 ? (matchedNGrams.length / totalNGrams) * 100 : 0;
   }
-  // async  getTopErrors(
-  //   letterErrors: Map<string, number>,
-  //   combinationErrors: { [key: string]: number }
-  // ): Promise<{ topLetterErrors: [string, number][], topCombinationErrors: { [key: string]: number } }> {
-  
-  //   // Сортировка и взятие первых 5 элементов для letterErrors
-  //   const topLetterErrorsArray = Array.from(letterErrors.entries())
-  //     .sort((a, b) => b[1] - a[1])
-  //     .slice(0, 5);
-  
-  //   // Сортировка и взятие первых 5 элементов для combinationErrors
-  //   const topCombinationErrorsArray = Object.entries(combinationErrors)
-  //     .sort(([, a], [, b]) => b - a)
-  //     .slice(0, 5);
-  
-  //   // Преобразование массива в объект
-  //   const topCombinationErrors = topCombinationErrorsArray.reduce((acc, [key, value]) => {
-  //     acc[key] = value;
-  //     return acc;
-  //   }, {} as { [key: string]: number });
-  
-  //   return { topLetterErrors: topLetterErrorsArray, topCombinationErrors };
-  // }
+
 
   private evaluateFitnessss(
     words: string[],
@@ -242,10 +209,10 @@ export class WordsService {
     const remainingWords = shuffle(randomWords).slice(0, remainingWordsCount);
   
     const finalWords = [...words, ...remainingWords];
-  
+    console.log(words.length)
     
     // const fitness = this.evaluateFitnessForWords(finalWords, letterErrors, combinationErrors);
-    const fitness = this.evaluateFitnessss(words, letterErrors, combinationErrors);
+    const fitness = this.evaluateFitnessss(finalWords, letterErrors, combinationErrors);
     this.logger.debug(`Фитнес для слов, подобранных методом getWordsByTopErrors: ${fitness}`);
   
     return finalWords;
@@ -323,7 +290,7 @@ export class WordsService {
     // const { topLetterErrorsMap, topCombinationErrorsMap } = await this.getTopErrors(letterErrors, combinationErrors);
 
     for (let generation = 0; generation < maxGenerations; generation++) {
-      console.log(population)
+      // console.log(population)
       const fitnesses = this.evaluateFitness(
         population,
         letterErrors,
@@ -343,7 +310,7 @@ export class WordsService {
 
      
       // console.log(bestFitness /  currentMaxFitness)
-      if (generation > 5 && (bestFitness /  currentMaxFitness > 0.95)) {
+      if (generation > 5 && (bestFitness /  currentMaxFitness > 0.7)) {
         flag += 1;
         // console.log(flag)  
         if (flag === 7){
@@ -413,16 +380,15 @@ export class WordsService {
   ): number[] {
     const fitnesses = [];
     
-    // Преобразуем ошибки в массивы n-грамм
-    const letterNGrams = this.getLetterNGrams(letterErrors); // N-граммы из ошибок отдельных букв
-    const combinationNGrams = this.getCombinationNGrams(combinationErrors); // N-граммы из ошибок комбинаций
+    const letterNGrams = this.getLetterNGrams(letterErrors); 
+    const combinationNGrams = this.getCombinationNGrams(combinationErrors); 
   
     for (const words of population) {
       let totalNGrams = 0;
       let matchedNGramsCount = 0;
   
       for (const word of words) {
-        const wordNGrams = this.calculateNGrams(word); // N-граммы для текущего слова
+        const wordNGrams = this.calculateNGrams(word); 
         totalNGrams += wordNGrams.length;
   
         const matchedNGrams = wordNGrams.filter((ngram) => 
@@ -432,7 +398,6 @@ export class WordsService {
         matchedNGramsCount += matchedNGrams.length;
       }
   
-      // Рассчитываем процент совпадающих n-грамм относительно общего числа n-грамм
       const fitness = (matchedNGramsCount / totalNGrams);
       fitnesses.push(fitness);
     }
@@ -610,26 +575,29 @@ private crossover(parents: number[], population: string[][]): string[] {
   }
 
   private replacePopulation(
-    population: string[][],
-    child: string[],
-    letterErrors: Map<string, number>,
-    combinationErrors: Map<string, number>,
-  ): string[][] {
-    const fitnesses = this.evaluateFitness(
-      population,
-      letterErrors,
-      combinationErrors,
-    );
-    const minFitnessIndex = fitnesses.indexOf(Math.min(...fitnesses));
-    const newPopulation = [...population];
+  population: string[][],
+  child: string[],
+  letterErrors: Map<string, number>,
+  combinationErrors: Map<string, number>,
+): string[][] {
+  const fitnesses = this.evaluateFitness(
+    population,
+    letterErrors,
+    combinationErrors,
+  );
 
-    const bestFitnessIndex = fitnesses.indexOf(Math.max(...fitnesses));
-    if (minFitnessIndex !== bestFitnessIndex) {
-      newPopulation[minFitnessIndex] = child;
-    } else {
-      newPopulation[minFitnessIndex] = population[bestFitnessIndex];
-    }
+  const minFitnessIndex = fitnesses.indexOf(Math.min(...fitnesses));
+  const childFitness = this.evaluateFitnessss(child, letterErrors, combinationErrors)[0];
+  const bestFitnessIndex = fitnesses.indexOf(Math.max(...fitnesses));
 
-    return newPopulation;
+  const newPopulation = [...population];
+
+  if (childFitness > fitnesses[minFitnessIndex]) {
+    newPopulation[minFitnessIndex] = child;
+  } else {
+    newPopulation[minFitnessIndex] = population[bestFitnessIndex];
   }
+
+  return newPopulation;
+}
 }
